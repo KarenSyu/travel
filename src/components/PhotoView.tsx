@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { analyzePhoto } from '../services/geminiService';
+import { analyzePhoto } from '../../services/geminiService';
 import { Camera, Image as ImageIcon, Loader2, UploadCloud, Sparkles } from 'lucide-react';
 
 export const PhotoView: React.FC = () => {

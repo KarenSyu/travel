@@ -1,10 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useItinerary } from '../contexts/ItineraryContext';
-import { Plane, MapPin, Calendar, Smartphone, FileText, ExternalLink, Train, Footprints } from 'lucide-react';
+import { Plane, MapPin, Calendar, Smartphone, FileText, ExternalLink, Train, Footprints, Clock } from 'lucide-react';
 
 export const ItineraryView: React.FC = () => {
   const { itinerary } = useItinerary();
   const [activeDay, setActiveDay] = useState<number>(1);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getFormattedTime = (timeZone: string) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(time);
+    } catch (e) {
+      return "--:--";
+    }
+  };
 
   const currentDayPlan = itinerary.days.find(d => d.dayNumber === activeDay);
 
@@ -15,22 +35,42 @@ export const ItineraryView: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
       {/* Header Image Area - Sticky */}
-      <div className="relative h-40 w-full bg-blue-200 overflow-hidden shrink-0">
+      <div className="relative h-44 w-full bg-blue-200 overflow-hidden shrink-0">
         <img 
           src="https://picsum.photos/800/400?random=1" 
           alt="Okinawa Header" 
           className="w-full h-full object-cover opacity-90"
         />
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-gray-900/80 to-transparent p-4">
-          <h1 className="text-white text-xl font-bold">沖繩之旅 Okinawa</h1>
-          <p className="text-white/90 text-xs flex items-center gap-1">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/30 via-transparent to-gray-900/90 z-10"></div>
+        
+        {/* Dual Clocks */}
+        <div className="absolute top-0 right-4 z-20 pt-safe mt-3 flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
+            <span className="text-lg mr-1 leading-none shadow-sm">🇯🇵</span>
+            <div className="text-right">
+              <div className="text-[10px] text-gray-200 font-medium leading-none mb-0.5">日本時間</div>
+              <div className="text-white font-mono font-bold text-sm tracking-widest leading-none drop-shadow-md">{getFormattedTime('Asia/Tokyo')}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
+            <span className="text-lg mr-1 leading-none shadow-sm">🇹🇼</span>
+            <div className="text-right">
+              <div className="text-[10px] text-gray-200 font-medium leading-none mb-0.5">台北時間</div>
+              <div className="text-white font-mono font-bold text-sm tracking-widest leading-none drop-shadow-md">{getFormattedTime('Asia/Taipei')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 w-full p-4 z-20">
+          <h1 className="text-white text-2xl font-bold tracking-tight drop-shadow-md">沖繩之旅 Okinawa</h1>
+          <p className="text-white/90 text-xs flex items-center gap-1 mt-1 font-medium">
             <Calendar size={12} /> 2026.01.09 - 01.12
           </p>
         </div>
       </div>
 
       {/* Day Tabs */}
-      <div className="bg-white border-b border-gray-200 px-2 pt-2 sticky top-0 z-20 shadow-sm overflow-x-auto no-scrollbar">
+      <div className="bg-white border-b border-gray-200 px-2 pt-2 sticky top-0 z-30 shadow-sm overflow-x-auto no-scrollbar">
         <div className="flex space-x-2 pb-2">
           {itinerary.days.map((day) => (
             <button

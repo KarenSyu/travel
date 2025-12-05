@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema, FunctionDeclaration } from "@google/genai";
-import { INITIAL_PROMPT_CONTEXT } from "../constants";
+import { INITIAL_PROMPT_CONTEXT } from "../../constants";
 import { Itinerary, DayPlan } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });

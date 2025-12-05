@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
 import { ItineraryView } from './components/ItineraryView';
-import { ChatView } from './components/ChatView';
-import { PhotoView } from './components/PhotoView';
+import { CurrencyView } from './components/CurrencyView';
+import { AccountingView } from './components/AccountingView';
 import { BottomNav } from './components/BottomNav';
 import { View } from './types';
 import { ItineraryProvider } from './contexts/ItineraryContext';
 
-// Simple Error Boundary to catch crashes (e.g., API key missing, network error)
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: any) {
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+// Simple Error Boundary to catch crashes
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
@@ -27,7 +37,6 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
         <div className="flex flex-col items-center justify-center h-full w-full p-8 text-center bg-gray-50 font-sans">
           <div className="bg-white p-6 rounded-2xl shadow-lg border border-red-100 max-w-sm">
             <h2 className="text-xl font-bold text-red-600 mb-2">發生錯誤</h2>
-            <p className="text-sm text-gray-600 mb-4">應用程式無法載入，可能是因為 API 金鑰未設定或網路連線問題。</p>
             <div className="text-xs text-left bg-gray-100 p-3 rounded border border-gray-200 overflow-auto max-h-32 mb-4 break-all">
               {this.state.error?.message || "Unknown Error"}
             </div>
@@ -53,10 +62,10 @@ const App: React.FC = () => {
     switch (currentView) {
       case View.ITINERARY:
         return <ItineraryView />;
-      case View.CHAT:
-        return <ChatView />;
-      case View.PHOTO:
-        return <PhotoView />;
+      case View.CURRENCY:
+        return <CurrencyView />;
+      case View.ACCOUNTING:
+        return <AccountingView />;
       default:
         return <ItineraryView />;
     }

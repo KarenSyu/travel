@@ -1,7 +1,7 @@
 export enum View {
   ITINERARY = 'ITINERARY',
-  CHAT = 'CHAT',
-  PHOTO = 'PHOTO'
+  CURRENCY = 'CURRENCY',
+  ACCOUNTING = 'ACCOUNTING'
 }
 
 export interface Flight {
@@ -44,4 +44,13 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
+}
+
+export interface Expense {
+  id: string;
+  item: string;
+  amount: number; // JPY
+  category: string;
+  date: number; // timestamp
+  note?: string;
 }
