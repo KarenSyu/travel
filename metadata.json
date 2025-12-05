@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Okinawa Trip 2026",
+  "description": "Smart travel companion for your Okinawa trip in January 2026. Features itinerary planning, AI chat assistance, and photo analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
