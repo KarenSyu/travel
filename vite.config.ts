@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
     base: './', 
     define: {
       // Safely inject the API key from system environment variables during build
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
+      // 'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
     },
     build: {
       outDir: 'dist',

@@ -22,16 +22,6 @@ export const TRIP_DATA: TripDetails = {
   }
 };
 
-export const INITIAL_PROMPT_CONTEXT = `
-You are a travel assistant for a trip to Okinawa, Japan.
-Language: Traditional Chinese (Taiwan).
-Travel Dates: Jan 9, 2026 to Jan 12, 2026.
-Outbound: Arrive Okinawa 15:55 on Jan 9.
-Inbound: Depart Okinawa 16:55 on Jan 12.
-Accomodation: Naha city center (Kokusai Dori area).
-Transportation Mode within Okinawa: Yui Rail (Monorail) and Walking ONLY. No car rental.
-Focus: Food, sightseeing, and relaxation.
-`;
 
 export const DEFAULT_ITINERARY: Itinerary = {
   days: [
