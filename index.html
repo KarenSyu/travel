@@ -50,6 +50,10 @@
         padding-top: env(safe-area-inset-top);
       }
     </style>
+    <script>
+      // Polyfill for process.env to prevent "process is not defined" crash on static hosts (GitHub Pages)
+      window.process = window.process || { env: { API_KEY: '' } };
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -62,7 +66,9 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-gray-900 overflow-hidden h-screen w-screen fixed">
+  <body class="bg-gray-50 text-gray-900 overflow-hidden h-[100dvh] w-screen fixed">
     <div id="root" class="h-full w-full"></div>
+    <!-- Entry point script is required for the app to load -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
