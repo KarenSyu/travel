@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, Schema, FunctionDeclaration } from "@google/genai";
 import { INITIAL_PROMPT_CONTEXT } from "../constants";
 import { Itinerary, DayPlan } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.VITE_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Schema for structured itinerary generation (kept for reference or full regen if needed)
 const itinerarySchema: Schema = {
