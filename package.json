@@ -2,10 +2,13 @@
   "name": "okinawa-trip-2026",
   "version": "1.0.0",
   "type": "module",
+  "homepage": "https://karensyu.github.io/travel/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+  "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "react": "^18.3.1",

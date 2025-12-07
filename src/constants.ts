@@ -1,4 +1,4 @@
-import { TripDetails, Itinerary } from './src/types';
+import { TripDetails, Itinerary } from '././types';
 
 // Data extracted from the user's image
 export const TRIP_DATA: TripDetails = {

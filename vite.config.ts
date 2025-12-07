@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     // Base path for GitHub Pages (assumes deployment at root or handles relative paths)
-    base: './', 
+    base: '/travel/', 
     define: {
       // Safely inject the API key from system environment variables during build
       // 'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
