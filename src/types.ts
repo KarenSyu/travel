@@ -14,11 +14,6 @@ export interface Flight {
   date: string;
 }
 
-export interface TripDetails {
-  outbound: Flight;
-  inbound: Flight;
-}
-
 export interface Activity {
   time: string;
   title: string;
@@ -49,8 +44,8 @@ export interface ChatMessage {
 export interface Expense {
   id: string;
   item: string;
-  amount: number; // JPY
+  amount: number;// JPY
   category: string;
-  date: number; // timestamp
-  note?: string;
+  date: number;// timestamp
+  isDeleted?: boolean; 
 }

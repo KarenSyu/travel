@@ -1,27 +1,4 @@
-import { TripDetails, Itinerary } from '././types';
-
-// Data extracted from the user's image
-export const TRIP_DATA: TripDetails = {
-  outbound: {
-    code: 'FD230',
-    airline: '泰國亞航 (AirAsia)',
-    depAirport: 'TPE 台灣桃園國際機場 T1',
-    arrAirport: 'OKA 那霸機場 I',
-    date: '2026-01-09',
-    depTime: '2026-01-09T13:25:00',
-    arrTime: '2026-01-09T15:55:00',
-  },
-  inbound: {
-    code: 'FD231',
-    airline: '泰國亞航 (AirAsia)',
-    depAirport: 'OKA 那霸機場 I',
-    arrAirport: 'TPE 台灣桃園國際機場 T1',
-    date: '2026-01-12',
-    depTime: '2026-01-12T16:55:00',
-    arrTime: '2026-01-12T17:35:00',
-  }
-};
-
+import { Itinerary } from '././types';
 
 export const DEFAULT_ITINERARY: Itinerary = {
   days: [

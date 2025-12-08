@@ -38,15 +38,18 @@ export const AccountingView: React.FC = () => {
   };
 
   const handleAdd = () => {
-    if (!item || !amount) return;
+    // ✨ 優化 1: 簡單的防呆，金額必須大於 0
+    if (!item || !amount || Number(amount) <= 0) return;
 
     // Use a simpler ID for readability if debugging, but timestamp is fine for uniqueness in small groups
     const newExpense: Expense = {
-      id: Date.now().toString(), 
+      // ✨ 優化 2: 強化 ID 唯一性，避免多人同時記帳時 ID 重複
+      id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       item,
       amount: parseFloat(amount),
       category,
-      date: Date.now()
+      date: Date.now(),
+      isDeleted: false // 預設未刪除
     };
 
     const updated = [newExpense, ...expenses];
@@ -58,7 +61,14 @@ export const AccountingView: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    const updated = expenses.filter(e => e.id !== id);
+    // const updated = expenses.filter(e => e.id !== id);
+    // saveExpenses(updated);
+    // ✨ 優化 3: 軟刪除 (Soft Delete)
+    // 不要直接 filter 掉，而是把 isDeleted 設為 true
+    // 這樣同步時，後端才會知道這筆資料被刪除了 (後端會更新該 ID 的狀態)
+    const updated = expenses.map(e => 
+      e.id === id ? { ...e, isDeleted: true } : e
+    );
     saveExpenses(updated);
   };
 
@@ -87,7 +97,8 @@ export const AccountingView: React.FC = () => {
         headers: {
           'Content-Type': 'text/plain;charset=utf-8', 
         },
-        body: JSON.stringify({ expenses })
+        // 這裡會把包含 isDeleted: true 的資料也傳給後端，後端會更新它的狀態
+        body: JSON.stringify({ sheetName : "ACCOUNTING", expenses })
       });
       
       const data = await response.json();
@@ -110,7 +121,11 @@ export const AccountingView: React.FC = () => {
     }
   };
 
-  const totalJPY = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // const totalJPY = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // const totalTWD = Math.round(totalJPY * rate);
+  // ✨ 優化 4: 計算總金額時，要過濾掉已刪除的項目
+  const validExpenses = expenses.filter(e => !e.isDeleted);
+  const totalJPY = validExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalTWD = Math.round(totalJPY * rate);
 
   return (
@@ -244,13 +259,14 @@ export const AccountingView: React.FC = () => {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3 no-scrollbar">
-        {expenses.length === 0 ? (
+        {validExpenses.length === 0 ? (// ✨ 這裡改用 validExpenses 判斷
             <div className="text-center text-gray-400 mt-10">
                 <Receipt size={48} className="mx-auto mb-2 opacity-20" />
                 <p>還沒有記帳紀錄</p>
             </div>
         ) : (
-            expenses.map(exp => (
+            // ✨ 這裡改用 validExpenses 判斷
+            validExpenses.map(exp => (
                 <div key={exp.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center gap-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shrink-0
