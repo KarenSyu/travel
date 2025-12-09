@@ -104,6 +104,28 @@ export const ItineraryView: React.FC = () => {
   const { itinerary, loading, moveActivity, addActivity, editActivity, deleteActivity } = useItinerary();
   const [activeDay, setActiveDay] = useState<number>(1);
   const [isEditMode, setIsEditMode] = useState(false); // ✨ 編輯模式開關
+
+  //日本、台灣當地時間
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getFormattedTime = (timeZone: string) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(time);
+    } catch (e) {
+      return "--:--";
+    }
+  };
+
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -158,24 +180,55 @@ export const ItineraryView: React.FC = () => {
   const safeActiveDay = itinerary.days.find(d => d.dayNumber === activeDay) ? activeDay : itinerary.days[0]?.dayNumber || 1;
   const currentDayPlan = itinerary.days.find(d => d.dayNumber === safeActiveDay);
 
+  const getGoogleMapsUrl = (query: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  };
+
+
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-      {/* Header Image (簡化版，省略之前的時鐘部分以節省篇幅，請保留你原有的 header) */}
-      <div className="relative h-32 w-full bg-blue-600 shrink-0 flex items-end p-4">
-        <div className="text-white z-10 w-full flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-bold">{itinerary.title}</h1>
-            <p className="text-xs opacity-80">{itinerary.days[0]?.date} 出發</p>
+    <div className="relative h-44 w-full bg-blue-200 overflow-hidden shrink-0">
+        <img 
+          src="https://picsum.photos/800/400?random=1" 
+          alt="Okinawa Header" 
+          className="w-full h-full object-cover opacity-90"
+        />
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-black/30 via-transparent to-gray-900/90 z-10"></div>
+        
+        {/* Dual Clocks */}
+        <div className="absolute top-0 right-4 z-20 pt-safe mt-3 flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
+            <span className="text-lg mr-1 leading-none shadow-sm">🇯🇵</span>
+            <div className="text-right">
+              <div className="text-[10px] text-gray-200 font-medium leading-none mb-0.5">日本時間</div>
+              <div className="text-white font-mono font-bold text-sm tracking-widest leading-none drop-shadow-md">{getFormattedTime('Asia/Tokyo')}</div>
+            </div>
           </div>
-          {/* ✨ 編輯模式切換按鈕 */}
+          <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 shadow-lg">
+            <span className="text-lg mr-1 leading-none shadow-sm">🇹🇼</span>
+            <div className="text-right">
+              <div className="text-[10px] text-gray-200 font-medium leading-none mb-0.5">台北時間</div>
+              <div className="text-white font-mono font-bold text-sm tracking-widest leading-none drop-shadow-md">{getFormattedTime('Asia/Taipei')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-0 w-full p-4 z-20">
+          <div>
+            <h1 className="text-white text-2xl font-bold tracking-tight drop-shadow-md">{itinerary.title}</h1>
+            <p className="text-white/90 text-xs flex items-center gap-1 mt-1 font-medium">
+              <Calendar size={12} /> {itinerary.days[0]?.date} - { itinerary.days[itinerary.days.length - 1]?.date.slice(-5)}
+            </p>
+          </div>
           <button 
             onClick={() => setIsEditMode(!isEditMode)}
-            className={`p-2 rounded-full transition-colors ${isEditMode ? 'bg-white text-blue-600' : 'bg-white/20 text-white'}`}
+            className={`absolute bottom-5 right-5 p-2 rounded-full transition-colors ${isEditMode ? 'bg-white text-blue-600' : 'bg-white/20 text-white'}`}
           >
             {isEditMode ? <Save size={20} /> : <Edit2 size={20} />}
           </button>
         </div>
       </div>
+
 
       {/* Day Tabs */}
       <div className="bg-white border-b border-gray-200 px-2 pt-2 sticky top-0 z-30 shadow-sm overflow-x-auto no-scrollbar">
@@ -268,7 +321,14 @@ export const ItineraryView: React.FC = () => {
                                <div className={`bg-white rounded-2xl p-4 shadow-sm border transition-colors ${
                                  isEditMode ? 'border-dashed border-gray-300' : 'border-gray-100'
                                }`}>
-                                 <h4 className="font-bold text-gray-800 text-base mb-1">{activity.title}</h4>
+                                 <div className="flex justify-between items-start mb-1">
+                                  <h4 className="font-bold text-gray-800 text-base">{activity.title}</h4>
+                                  <div className="flex gap-2">
+                                    <a href={getGoogleMapsUrl(activity.location)} target="_blank" rel="noreferrer">
+                                      <ExternalLink size={14} className="text-gray-300 hover:text-okinawa-blue" />
+                                    </a>
+                                  </div>
+                                </div>
                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
                                    <MapPin size={12} className="shrink-0" />
                                    <span className="truncate">{activity.location}</span>
