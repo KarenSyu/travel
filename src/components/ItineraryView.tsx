@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useItinerary } from '../contexts/ItineraryContext';
 import { 
   MapPin, Calendar, ExternalLink, Train, Footprints, 
@@ -48,13 +48,15 @@ const ActivityModal = ({
           <div className="flex gap-2">
             <input 
               type="time" 
-              className="border p-2 rounded-lg w-1/3"
+              className="border p-2 rounded-lg w-full"
               value={formData.time}
               onChange={e => setFormData({...formData, time: e.target.value})}
             />
+          </div>
+          <div className="flex gap-2">
             <input 
               placeholder="標題 (例: 吃拉麵)" 
-              className="border p-2 rounded-lg w-2/3"
+              className="border p-2 rounded-lg w-full"
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
             />
@@ -105,6 +107,9 @@ export const ItineraryView: React.FC = () => {
   const [activeDay, setActiveDay] = useState<number>(1);
   const [isEditMode, setIsEditMode] = useState(false); // ✨ 編輯模式開關
 
+  // 建立一個 Ref 來綁定捲動區域
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   //日本、台灣當地時間
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -125,6 +130,18 @@ export const ItineraryView: React.FC = () => {
       return "--:--";
     }
   };
+
+  // 新增這個 Effect：當 activeDay 改變時，執行捲動歸零
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // scrollTo(0, 0) 是瞬間跳轉，比較適合切換分頁
+      // 如果想要平滑滾動，可以改用 behavior: 'smooth'
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth' // 或 'auto' (瞬間跳轉)
+      });
+    }
+  }, [activeDay]); // 監聽 activeDay
 
   // 處理儲存
   const handleSave = async () => {
@@ -197,10 +214,15 @@ export const ItineraryView: React.FC = () => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
 
+  const clickDay = (day) => {
+     setActiveDay(day.dayNumber);
+      console.log("clickDay", day);
+  }
+
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-    <div className="relative h-44 w-full bg-blue-200 overflow-hidden shrink-0">
+      <div className="relative h-44 w-full bg-blue-200 overflow-hidden shrink-0 z-30">
         <img 
           src="https://picsum.photos/800/400?random=1" 
           alt="Okinawa Header" 
@@ -251,21 +273,21 @@ export const ItineraryView: React.FC = () => {
           {isEditMode && (
             <>
               <button 
-                onClick={handleCancel}
-                className="absolute bottom-5 right-5 flex gap-1 px-3 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium backdrop-blur-sm transition-colors"
-              >
-                <X size={16} /> 取消
-              </button>
-              <button 
                 onClick={handleSave}
-                className="absolute bottom-5 left-5 flex items-end gap-1 px-3 py-2 bg-green-500/80 hover:bg-green-500 text-white rounded-lg text-sm font-bold backdrop-blur-sm shadow-lg transition-colors"
+                className="absolute bottom-5 right-5 flex items-end gap-1 px-3 py-2 bg-green-500/80 hover:bg-green-500 text-white rounded-lg text-sm font-bold backdrop-blur-sm shadow-lg transition-colors"
               >
                 <Save size={16} /> 儲存
+              </button>
+              <button 
+                onClick={handleCancel}
+                className="absolute bottom-5 right-[100px] flex gap-1 px-3 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium backdrop-blur-sm transition-colors"
+              >
+                <X size={16} /> 取消
               </button>
             </>
           )}
 
-          <p className="text-white/90 text-xs flex items-center gap-1 mt-1 font-medium text-right">
+          <p className="absolute bottom-0 right-5  text-white/90 text-xs flex items-center gap-1 mt-1 font-medium text-right">
             {hasUnsavedChanges ? '⚠️ 有未儲存的變更' : ''}
           </p>
 
@@ -279,7 +301,7 @@ export const ItineraryView: React.FC = () => {
           {itinerary.days.map((day) => (
             <button
               key={day.dayNumber}
-              onClick={() => setActiveDay(day.dayNumber)}
+              onClick={() => clickDay(day)}
               className={`flex-1 min-w-[80px] py-2 px-3 rounded-xl text-center transition-all ${
                 safeActiveDay === day.dayNumber 
                   ? 'bg-blue-500 text-white shadow-md' 
@@ -296,7 +318,19 @@ export const ItineraryView: React.FC = () => {
       </div>
 
       {/* Content Area with Drag & Drop */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-2 py-4">
+      <div className="flex-1 overflow-y-auto no-scrollbar px-2 py-4" ref={scrollContainerRef}>
+        <div className="relative w-full pl-10">
+            {/* ✨ 新增行程的按鈕 (只在編輯模式顯示) */}
+            {isEditMode && (
+              <button 
+                onClick={handleAddNew}
+                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+              >
+                <Plus size={20} className="mr-2" /> 新增行程
+              </button>
+            )}
+        </div>
+       
         <DragDropContext onDragEnd={onDragEnd}>
           {/* 我們只顯示當前的 Day，但如果要做並排拖曳，這裡邏輯要改。手機版通常一次看一天。 */}
           <Droppable droppableId={`day-${safeActiveDay}`}>
@@ -306,9 +340,10 @@ export const ItineraryView: React.FC = () => {
                 ref={provided.innerRef}
                 className="space-y-4 pl-2"
               >
+                
                 {/* Vertical Line */}
-                <div className="absolute left-[23px] top-0 bottom-0 w-0.5 bg-gray-200 -z-10"></div>
-
+                <div className="absolute left-[30px] top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                
                 {currentDayPlan?.activities.map((activity, index) => (
                   <Draggable 
                     key={activity.id} // Key 必須唯一
@@ -395,16 +430,7 @@ export const ItineraryView: React.FC = () => {
                   </Draggable>
                 ))}
                 {provided.placeholder}
-                
-                {/* ✨ 新增按鈕 (只在編輯模式顯示) */}
-                {isEditMode && (
-                  <button 
-                    onClick={handleAddNew}
-                    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                  >
-                    <Plus size={20} className="mr-2" /> 新增行程
-                  </button>
-                )}
+
               </div>
             )}
           </Droppable>
