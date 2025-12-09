@@ -4,7 +4,11 @@ import { Itinerary, DayPlan, Activity } from '../types';
 interface ItineraryContextType {
   itinerary: Itinerary | null;
   loading: boolean;
+  hasUnsavedChanges: boolean; // ✨ 新增：告訴 UI 有沒有未儲存的變更
   updateItinerary: (newItinerary: Itinerary) => void;
+  saveChanges: () => Promise<void>;   // ✨ 新增：手動儲存
+  revertChanges: () => void;          // ✨ 新增：還原變更
+  // CRUD
   addActivity: (dayNumber: number, activity: Activity) => void;
   editActivity: (dayNumber: number, activityIndex: number, updatedActivity: Activity) => void;
   deleteActivity: (dayNumber: number, activityIndex: number) => void;
@@ -27,37 +31,66 @@ export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({
   onSaveToSheet // ✨ 確保這裡有接收到
 }) => {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [originalItinerary, setOriginalItinerary] = useState<Itinerary | null>(null); // ✨ 用來對照的原始檔
 
   // 初始化邏輯
   useEffect(() => {
     if (initialData) {
       setItinerary(initialData);
+      setOriginalItinerary(JSON.parse(JSON.stringify(initialData))); // 建立副本作為基準點
       localStorage.setItem('okinawa_itinerary_2026_sheet_cache', JSON.stringify(initialData));
     } else {
       const cached = localStorage.getItem('okinawa_itinerary_2026_sheet_cache');
       if (cached) {
-        try { setItinerary(JSON.parse(cached)); } catch (e) { console.error(e); }
+        try { 
+          const parsed = JSON.parse(cached);
+          setItinerary(parsed); 
+          setOriginalItinerary(JSON.parse(JSON.stringify(parsed))); // 建立副本
+        } catch (e) { console.error(e); }
       }
     }
   }, [initialData]);
 
-  // ✨ 核心修正 1: 統一更新入口
+  // 判斷是否有變更 (簡易比對)
+  const hasUnsavedChanges = JSON.stringify(itinerary) !== JSON.stringify(originalItinerary);
+
+  // ✨ 統一更新入口：只更新本地 State，不觸發上傳
   const updateItinerary = useCallback((newItinerary: Itinerary) => {
-    // 1. 先更新畫面 (讓使用者覺得很快)
+    //只更新畫面
     setItinerary(newItinerary);
+    // 我們可以選擇是否要同步更新 localStorage 作為「Draft (草稿)」，
+    // 但為了簡單符合你的「取消」需求，這裡我們先不覆寫 'sheet_cache'，
+    // 這樣如果不小心重整網頁，就會回到上次存檔的狀態 (即變相的取消)。
+  }, []);
+
+  // ✨ 手動儲存到雲端(實際觸發同步雲端)
+  const saveChanges = useCallback(async () => {
+    if (!itinerary || !onSaveToSheet) return;
     
-    // 2. 更新 LocalStorage
-    localStorage.setItem('okinawa_itinerary_2026_sheet_cache', JSON.stringify(newItinerary));
-    
-    // 3. ✨ 觸發雲端儲存 (這就是你之前缺少的！)
-    if (onSaveToSheet) {
-      console.log("Triggering Cloud Save..."); // 除錯用
-      onSaveToSheet(newItinerary).catch(err => {
-        console.error("Cloud save failed:", err);
-        // 這裡未來可以加一個 Toast 提示使用者儲存失敗
-      });
+    try {
+      console.log("Saving changes to Cloud...");
+      await onSaveToSheet(itinerary);
+      
+      // 儲存成功後，把現在的狀態變成新的「原始狀態」
+      setOriginalItinerary(JSON.parse(JSON.stringify(itinerary)));
+      
+      // 同步更新快取
+      localStorage.setItem('okinawa_itinerary_2026_sheet_cache', JSON.stringify(itinerary));
+      console.log("Changes saved and committed.");
+    } catch (error) {
+      console.error("Failed to save:", error);
+      alert("儲存失敗，請檢查網路");
     }
-  }, [onSaveToSheet]);
+  }, [itinerary, onSaveToSheet]);
+
+  // ✨ 新增：取消/還原
+  const revertChanges = useCallback(() => {
+    if (originalItinerary) {
+      // 恢復成原始狀態
+      setItinerary(JSON.parse(JSON.stringify(originalItinerary)));
+      console.log("Changes reverted.");
+    }
+  }, [originalItinerary]);
 
   // --- CRUD 實作 (現在都統一呼叫 updateItinerary) ---
 
@@ -115,7 +148,10 @@ export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({
     <ItineraryContext.Provider value={{ 
       itinerary, 
       loading: isLoading && !itinerary, 
+      hasUnsavedChanges, // 匯出這個狀態
       updateItinerary,
+      saveChanges,       // 匯出儲存
+      revertChanges,     // 匯出取消
       addActivity,
       editActivity,
       deleteActivity,

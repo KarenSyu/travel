@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useItinerary } from '../contexts/ItineraryContext';
 import { 
   MapPin, Calendar, ExternalLink, Train, Footprints, 
-  Loader2, Plus, GripVertical, Edit2, Trash2, Save, X 
+  Loader2, Plus, GripVertical, Edit2, Trash2, Save, X, RotateCcw, Check
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Activity } from '../types';
@@ -101,7 +101,7 @@ const ActivityModal = ({
 };
 
 export const ItineraryView: React.FC = () => {
-  const { itinerary, loading, moveActivity, addActivity, editActivity, deleteActivity } = useItinerary();
+  const {itinerary, loading, hasUnsavedChanges, saveChanges, revertChanges, moveActivity, addActivity, editActivity, deleteActivity } = useItinerary();
   const [activeDay, setActiveDay] = useState<number>(1);
   const [isEditMode, setIsEditMode] = useState(false); // ✨ 編輯模式開關
 
@@ -126,6 +126,19 @@ export const ItineraryView: React.FC = () => {
     }
   };
 
+  // 處理儲存
+  const handleSave = async () => {
+    await saveChanges();
+    setIsEditMode(false); // 儲存後自動退出編輯模式 (看個人喜好，也可不加)
+  };
+
+  // 處理取消
+  const handleCancel = () => {
+    // if (confirm('確定要放棄所有未儲存的變更嗎？')) {
+      revertChanges();
+      setIsEditMode(false);
+    // }
+  };
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -213,19 +226,49 @@ export const ItineraryView: React.FC = () => {
           </div>
         </div>
 
+        {/* 標題 */}
         <div className="absolute bottom-0 left-0 w-full p-4 z-20">
-          <div>
-            <h1 className="text-white text-2xl font-bold tracking-tight drop-shadow-md">{itinerary.title}</h1>
+           <h1 className="text-white text-2xl font-bold tracking-tight drop-shadow-md">{itinerary.title}</h1>
             <p className="text-white/90 text-xs flex items-center gap-1 mt-1 font-medium">
-              <Calendar size={12} /> {itinerary.days[0]?.date} - { itinerary.days[itinerary.days.length - 1]?.date.slice(-5)}
+              <Calendar size={12} /> 
+              {itinerary.days[0]?.date} - { itinerary.days[itinerary.days.length - 1]?.date.slice(-5)}
             </p>
-          </div>
+        </div>
+
+        {/* 編輯/儲存及取消 */}
+        <div className="absolute bottom-0 right-0 w-1/2 p-4 z-20">
           <button 
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`absolute bottom-5 right-5 p-2 rounded-full transition-colors ${isEditMode ? 'bg-white text-blue-600' : 'bg-white/20 text-white'}`}
-          >
-            {isEditMode ? <Save size={20} /> : <Edit2 size={20} />}
+                onClick={() => setIsEditMode(true)}
+                className={`absolute bottom-5 right-5 p-2 rounded-full transition-colors ${
+                  isEditMode ? 'hidden' : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+                title = "進入編輯模式"
+              >
+            <Edit2 size={20} />
           </button>
+                
+
+          {isEditMode && (
+            <>
+              <button 
+                onClick={handleCancel}
+                className="absolute bottom-5 right-5 flex gap-1 px-3 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium backdrop-blur-sm transition-colors"
+              >
+                <X size={16} /> 取消
+              </button>
+              <button 
+                onClick={handleSave}
+                className="absolute bottom-5 left-5 flex items-end gap-1 px-3 py-2 bg-green-500/80 hover:bg-green-500 text-white rounded-lg text-sm font-bold backdrop-blur-sm shadow-lg transition-colors"
+              >
+                <Save size={16} /> 儲存
+              </button>
+            </>
+          )}
+
+          <p className="text-white/90 text-xs flex items-center gap-1 mt-1 font-medium text-right">
+            {hasUnsavedChanges ? '⚠️ 有未儲存的變更' : ''}
+          </p>
+
         </div>
       </div>
 

@@ -62,7 +62,7 @@ export const fetchItineraryFromSheet = async (): Promise<Itinerary> => {
         if (sortedDays.length === 0) {
            resolve({ days: [], title: 'My Trip' });
         } else {
-           resolve({ days: sortedDays, title: '沖繩之旅 Okinawa' }); // Title 可以另外存或寫死
+           resolve({ days: sortedDays, title: '沖繩 Okinawa' }); // Title 可以另外存或寫死
         }
       },
       error: (error) => {
