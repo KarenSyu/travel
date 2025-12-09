@@ -1,86 +1,125 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Itinerary, DayPlan } from '../types';
-// import { DEFAULT_ITINERARY } from '../constants';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { Itinerary, DayPlan, Activity } from '../types';
 
 interface ItineraryContextType {
-  itinerary: Itinerary | null; // 允許為 null (表示還沒載入)
-  loading: boolean;            // ✨ 新增: 讓 UI 知道是否正在載入
-  error: string | null;
+  itinerary: Itinerary | null;
+  loading: boolean;
   updateItinerary: (newItinerary: Itinerary) => void;
-  updateDayPlan: (dayIndex: number, newDayPlan: DayPlan) => void;
+  addActivity: (dayNumber: number, activity: Activity) => void;
+  editActivity: (dayNumber: number, activityIndex: number, updatedActivity: Activity) => void;
+  deleteActivity: (dayNumber: number, activityIndex: number) => void;
+  moveActivity: (sourceDayNum: number, sourceIndex: number, destDayNum: number, destIndex: number) => void;
 }
 
 const ItineraryContext = createContext<ItineraryContextType | undefined>(undefined);
 
-// ✨ 修改 1: 定義 Props 型別，加入 initialData (設為可選 ?)
 interface ItineraryProviderProps {
   children: ReactNode;
-  initialData?: Itinerary | null; // 這是從 App.tsx 傳進來的 Google Sheet 資料
-  isLoading?: boolean;            // App.tsx 告訴我們是否還在抓資料
+  initialData?: Itinerary | null;
+  isLoading?: boolean;
+  onSaveToSheet?: (itinerary: Itinerary) => Promise<void>; // 這是 App.tsx 傳進來的儲存函數
 }
 
-// ✨ 修改 2: 在參數中解構出 initialData
-export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children, initialData, isLoading = true }) => {
-  
-  // 1. 初始化 State logic:
-  // 嘗試從 LocalStorage 讀取舊資料當作「暫時畫面」，不使用 DEFAULT_ITINERARY
-  const [itinerary, setItinerary] = useState<Itinerary | null>(() => {
-    // 如果 App.tsx 已經把資料傳進來了，直接用
-    if (initialData) return initialData;
+export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ 
+  children, 
+  initialData, 
+  isLoading = true,
+  onSaveToSheet // ✨ 確保這裡有接收到
+}) => {
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
 
-    // 否則，嘗試讀取快取 (Offline support)
-    const cached = localStorage.getItem('okinawa_itinerary_2026_sheet_cache');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {
-        console.error("Failed to parse cached itinerary", e);
-        return null;
-      }
-    }
-    return null;
-  });
-
-  // 2. 當 Google Sheet 資料 (initialData) 改變時的 Effect
+  // 初始化邏輯
   useEffect(() => {
     if (initialData) {
-      console.log("Google Sheet data received, updating context...");
       setItinerary(initialData);
-      // 更新快取，並改用新的 key 避免混淆
       localStorage.setItem('okinawa_itinerary_2026_sheet_cache', JSON.stringify(initialData));
+    } else {
+      const cached = localStorage.getItem('okinawa_itinerary_2026_sheet_cache');
+      if (cached) {
+        try { setItinerary(JSON.parse(cached)); } catch (e) { console.error(e); }
+      }
     }
   }, [initialData]);
 
-  const updateItinerary = (newItinerary: Itinerary) => {
+  // ✨ 核心修正 1: 統一更新入口
+  const updateItinerary = useCallback((newItinerary: Itinerary) => {
+    // 1. 先更新畫面 (讓使用者覺得很快)
     setItinerary(newItinerary);
+    
+    // 2. 更新 LocalStorage
     localStorage.setItem('okinawa_itinerary_2026_sheet_cache', JSON.stringify(newItinerary));
+    
+    // 3. ✨ 觸發雲端儲存 (這就是你之前缺少的！)
+    if (onSaveToSheet) {
+      console.log("Triggering Cloud Save..."); // 除錯用
+      onSaveToSheet(newItinerary).catch(err => {
+        console.error("Cloud save failed:", err);
+        // 這裡未來可以加一個 Toast 提示使用者儲存失敗
+      });
+    }
+  }, [onSaveToSheet]);
+
+  // --- CRUD 實作 (現在都統一呼叫 updateItinerary) ---
+
+  const addActivity = (dayNumber: number, activity: Activity) => {
+    if (!itinerary) return;
+    const newItinerary = JSON.parse(JSON.stringify(itinerary)); // 深拷貝
+    const day = newItinerary.days.find((d: DayPlan) => d.dayNumber === dayNumber);
+    if (day) {
+      day.activities.push(activity);
+      updateItinerary(newItinerary); // 呼叫統一入口
+    }
   };
 
-  const updateDayPlan = (dayIndex: number, newDayPlan: DayPlan) => {
-    if (!itinerary) return; // 防呆
-
-    const newItinerary = { ...itinerary };
-    const arrayIndex = newItinerary.days.findIndex(d => d.dayNumber === newDayPlan.dayNumber);
-    
-    if (arrayIndex !== -1) {
-       newItinerary.days[arrayIndex] = newDayPlan;
-    } else {
-       if (newItinerary.days[dayIndex]) {
-         newItinerary.days[dayIndex] = newDayPlan;
-       }
+  const editActivity = (dayNumber: number, activityIndex: number, updatedActivity: Activity) => {
+    if (!itinerary) return;
+    const newItinerary = JSON.parse(JSON.stringify(itinerary));
+    const day = newItinerary.days.find((d: DayPlan) => d.dayNumber === dayNumber);
+    if (day && day.activities[activityIndex]) {
+      day.activities[activityIndex] = updatedActivity;
+      updateItinerary(newItinerary); // 呼叫統一入口
     }
+  };
+
+  const deleteActivity = (dayNumber: number, activityIndex: number) => {
+    if (!itinerary) return;
+    const newItinerary = JSON.parse(JSON.stringify(itinerary));
+    const day = newItinerary.days.find((d: DayPlan) => d.dayNumber === dayNumber);
+    if (day) {
+      day.activities.splice(activityIndex, 1);
+      updateItinerary(newItinerary); // 呼叫統一入口
+    }
+  };
+
+  // ✨ 核心修正 2: moveActivity 也要呼叫 updateItinerary
+  const moveActivity = (sourceDayNum: number, sourceIndex: number, destDayNum: number, destIndex: number) => {
+    if (!itinerary) return;
+
+    // 深拷貝一份資料 (確保 React 偵測到變化)
+    const newItinerary = JSON.parse(JSON.stringify(itinerary));
+
+    const sourceDay = newItinerary.days.find((d: DayPlan) => d.dayNumber === sourceDayNum);
+    const destDay = newItinerary.days.find((d: DayPlan) => d.dayNumber === destDayNum);
+
+    if (!sourceDay || !destDay) return;
+
+    // 移動邏輯
+    const [movedActivity] = sourceDay.activities.splice(sourceIndex, 1);
+    destDay.activities.splice(destIndex, 0, movedActivity);
+
+    // ✨ 關鍵：把計算完的結果傳給 updateItinerary，它會幫你存到雲端
     updateItinerary(newItinerary);
   };
 
   return (
     <ItineraryContext.Provider value={{ 
       itinerary, 
-      updateItinerary, 
-      updateDayPlan,
-      // 如果沒有 itinerary 資料 且 外部還在 loading，才算真正的 loading 狀態
-      // (這樣如果我們有快取資料，使用者就不會看到 Loading 轉圈圈，體驗較好)
       loading: isLoading && !itinerary, 
-      error: null
+      updateItinerary,
+      addActivity,
+      editActivity,
+      deleteActivity,
+      moveActivity
     }}>
       {children}
     </ItineraryContext.Provider>
@@ -88,9 +127,7 @@ export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children, 
 };
 
 export const useItinerary = () => {
-  const context = useContext(ItineraryContext);
-  if (context === undefined) {
-    throw new Error('useItinerary must be used within an ItineraryProvider');
-  }
-  return context;
+    const context = useContext(ItineraryContext);
+    if (context === undefined) throw new Error('useItinerary must be used within an ItineraryProvider');
+    return context;
 };

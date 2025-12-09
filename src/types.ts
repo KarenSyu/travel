@@ -15,6 +15,7 @@ export interface Flight {
 }
 
 export interface Activity {
+  id: string; // ✨ 新增這行
   time: string;
   title: string;
   description: string;

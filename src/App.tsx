@@ -5,7 +5,7 @@ import { AccountingView } from './components/AccountingView';
 import { BottomNav } from './components/BottomNav';
 import { View, Itinerary } from './types'; // 記得確認這裡有匯入 Itinerary
 import { ItineraryProvider } from './contexts/ItineraryContext';
-import { fetchItineraryFromSheet } from './services/sheetServices';
+import { fetchItineraryFromSheet, saveItineraryToSheet } from './services/sheetServices';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -84,6 +84,7 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
+
   const renderView = () => {
     switch (currentView) {
       case View.ITINERARY:
@@ -109,6 +110,22 @@ const App: React.FC = () => {
     );
   }
 
+  const handleSaveToSheet = async (newItinerary: Itinerary) => {
+    try {
+      // 顯示儲存中... (你可以加個 toast)
+      console.log("Saving to Google Sheet...");
+      
+      await saveItineraryToSheet(newItinerary);
+      
+      console.log("Saved successfully!");
+      // 成功後，或許可以重新 fetch 一次確認，或者就信任前端狀態
+    } catch (error) {
+      console.error("Save failed:", error);
+      alert("儲存失敗，請檢查網路或稍後再試");
+    }
+  };
+  
+
   // 4. 處理錯誤畫面 (如果 Google Sheet 讀不到)
   if (fetchError) {
     return (
@@ -133,7 +150,10 @@ const App: React.FC = () => {
          注意：這需要你的 ItineraryContext 支援 initialData 屬性。
          如果不支援，你可以暫時把 Context 改掉，或是去修改 Context 檔案。
       */}
-      <ItineraryProvider initialData={itinerary}>
+      <ItineraryProvider 
+        initialData={itinerary} 
+        isLoading={loading}
+        onSaveToSheet={handleSaveToSheet}> 
         <div className="h-full w-full flex flex-col bg-gray-50 font-sans text-gray-900">
           <main className="flex-1 relative overflow-hidden">
             {renderView()}
