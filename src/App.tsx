@@ -104,7 +104,7 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-black text-white">
-        <div className="animate-pulse text-xl font-bold">正在從雲端下載行程... ✈️</div>
+        <div className="animate-pulse text-xl font-bold">同步中... ✈️</div>
         <div className="text-sm text-gray-400 mt-2">Connecting to Google Sheets</div>
       </div>
     );
@@ -112,16 +112,23 @@ const App: React.FC = () => {
 
   const handleSaveToSheet = async (newItinerary: Itinerary) => {
     try {
+      setLoading(true);
       // 顯示儲存中... (你可以加個 toast)
       console.log("Saving to Google Sheet...");
-      
       await saveItineraryToSheet(newItinerary);
-      
       console.log("Saved successfully!");
-      // 成功後，或許可以重新 fetch 一次確認，或者就信任前端狀態
+
+      // 成功後，或許可以重新 fetch 一次確認，或者就信任前端狀態  
+      console.log("reload Google Sheet...");
+      const data = await fetchItineraryFromSheet();
+      setItinerary(data);
+      console.log("行程資料抓取成功！", data);
+      setLoading(false);
+
     } catch (error) {
       console.error("Save failed:", error);
       alert("儲存失敗，請檢查網路或稍後再試");
+      setLoading(false);
     }
   };
   

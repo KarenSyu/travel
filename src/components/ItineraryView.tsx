@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useItinerary } from '../contexts/ItineraryContext';
 import { 
   MapPin, Calendar, ExternalLink, Train, Footprints, 
-  Loader2, Plus, GripVertical, Edit2, Trash2, Save, X, RotateCcw, Check
+  Loader2, Plus, GripVertical, Edit2, Trash2, Save, X, RotateCcw, Check, FileText, Smartphone
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Activity } from '../types';
@@ -274,7 +274,8 @@ export const ItineraryView: React.FC = () => {
             <>
               <button 
                 onClick={handleSave}
-                className="absolute bottom-5 right-5 flex items-end gap-1 px-3 py-2 bg-green-500/80 hover:bg-green-500 text-white rounded-lg text-sm font-bold backdrop-blur-sm shadow-lg transition-colors"
+                disabled={!hasUnsavedChanges}
+                className={` ${hasUnsavedChanges? 'bg-green-500/80 hover:bg-green-500 transition-colors text-white': 'bg-gray-300 text-gray-400'} absolute bottom-5 right-5 flex items-end gap-1 px-3 py-2  rounded-lg text-sm font-bold backdrop-blur-sm shadow-lg `}
               >
                 <Save size={16} /> 儲存
               </button>
@@ -310,7 +311,7 @@ export const ItineraryView: React.FC = () => {
             >
               <div className="text-xs opacity-80">Day {day.dayNumber}</div>
               <div className="text-sm font-bold whitespace-nowrap">
-                {day.date.split('-').slice(1).join('/')}
+                {day.date.split('.').slice(1).join('/')}
               </div>
             </button>
           ))}
@@ -319,123 +320,168 @@ export const ItineraryView: React.FC = () => {
 
       {/* Content Area with Drag & Drop */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-2 py-4" ref={scrollContainerRef}>
-        <div className="relative w-full pl-10">
-            {/* ✨ 新增行程的按鈕 (只在編輯模式顯示) */}
-            {isEditMode && (
-              <button 
-                onClick={handleAddNew}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
-              >
-                <Plus size={20} className="mr-2" /> 新增行程
-              </button>
-            )}
-        </div>
+
+         {/* Important Reminders (Only on Day 1) */}
+        {!isEditMode && safeActiveDay === 1 && (
+            <div className="flex relative py-2 w-full">
+            <div className="relative w-full bg-gradient-to-r from-orange-50 to-red-50 border border-orange-100 rounded-2xl p-4 shadow-sm z-50">
+              <h3 className="text-orange-800 font-bold mb-3 text-sm flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                出發前必辦事項
+              </h3>
+              <div className="space-y-3">
+                <a 
+                  href="https://vjw-lp.digital.go.jp/zh-hant/" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="flex items-center justify-between bg-white p-3 rounded-xl border border-orange-200 active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 p-2 rounded-full text-blue-600">
+                      <FileText size={18} />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-gray-800 text-sm">填寫入境卡</div>
+                      <div className="text-[10px] text-gray-500">Visit Japan Web</div>
+                    </div>
+                  </div>
+                  <ExternalLink size={14} className="text-gray-400" />
+                </a>
+
+                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-orange-200">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-green-100 p-2 rounded-full text-green-600">
+                      <Smartphone size={18} />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-gray-800 text-sm">購買網卡/漫遊</div>
+                      <div className="text-[10px] text-gray-500">確認已開通日本漫遊</div>
+                    </div>
+                  </div>
+                  <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
        
-        <DragDropContext onDragEnd={onDragEnd}>
-          {/* 我們只顯示當前的 Day，但如果要做並排拖曳，這裡邏輯要改。手機版通常一次看一天。 */}
-          <Droppable droppableId={`day-${safeActiveDay}`}>
-            {(provided) => (
-              <div 
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="space-y-4 pl-2"
-              >
-                
-                {/* Vertical Line */}
-                <div className="absolute left-[30px] top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                
-                {currentDayPlan?.activities.map((activity, index) => (
-                  <Draggable 
-                    key={activity.id} // Key 必須唯一
-                    draggableId={activity.id} 
-                    index={index}
-                    isDragDisabled={!isEditMode} // 只有編輯模式可以拖曳
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={`relative group ${snapshot.isDragging ? 'z-50 opacity-90 scale-105' : ''}`}
-                        style={provided.draggableProps.style}
-                      >
-                        <div className="flex gap-4">
-                          {/* Node / Drag Handle */}
-                          <div 
-                            {...provided.dragHandleProps}
-                            className="relative z-10 shrink-0 mt-1 cursor-grab active:cursor-grabbing"
-                          >
-                            <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-lg shadow-sm transition-colors ${
-                              isEditMode ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-blue-500'
-                            }`}>
-                              {isEditMode ? <GripVertical size={16} className="text-yellow-600" /> : (activity.icon || '📍')}
+        {/* ✨ 新增行程的按鈕 (只在編輯模式顯示) */}
+        {isEditMode && (
+          <button 
+            onClick={handleAddNew}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+          >
+            <Plus size={20} className="mr-2" /> 新增行程
+          </button>
+        )}
+        
+        <div className="relative pl-2"> 
+          <DragDropContext onDragEnd={onDragEnd}>
+            {/* 我們只顯示當前的 Day，但如果要做並排拖曳，這裡邏輯要改。手機版通常一次看一天。 */}
+            <Droppable droppableId={`day-${safeActiveDay}`}>
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-4 pl-2"
+                >
+                  
+                  {/* Vertical Line */}
+                  <div className="absolute left-[30px] top-4 bottom-4 w-0.5 bg-gray-200"></div>
+                  
+                  {currentDayPlan?.activities.map((activity, index) => (
+                    <Draggable 
+                      key={activity.id} // Key 必須唯一
+                      draggableId={activity.id} 
+                      index={index}
+                      isDragDisabled={!isEditMode} // 只有編輯模式可以拖曳
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`relative group ${snapshot.isDragging ? 'z-50 opacity-90 scale-105' : ''}`}
+                          style={provided.draggableProps.style}
+                        >
+                          <div className="flex gap-4">
+                            {/* Node / Drag Handle */}
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="relative z-10 shrink-0 mt-1 cursor-grab active:cursor-grabbing"
+                            >
+                              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-lg shadow-sm transition-colors ${
+                                isEditMode ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-blue-500'
+                              }`}>
+                                {isEditMode ? <GripVertical size={16} className="text-yellow-600" /> : (activity.icon || '📍')}
+                              </div>
+                            </div>
+
+                            {/* Card Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="relative">
+                                <div className="flex justify-between items-baseline gap-2 mb-1">
+                                  <span className="font-mono text-lg font-bold text-blue-600">{activity.time}</span>
+                                  
+                                  {/* ✨ 編輯/刪除按鈕 (只在編輯模式顯示) */}
+                                  {isEditMode && (
+                                    <div className="flex gap-2">
+                                      <button 
+                                        onClick={() => handleEditClick(safeActiveDay, index, activity)}
+                                        className="p-1.5 bg-gray-100 rounded-full text-gray-600 hover:bg-blue-100 hover:text-blue-600"
+                                      >
+                                        <Edit2 size={14} />
+                                      </button>
+                                      <button 
+                                        onClick={() => deleteActivity(safeActiveDay, index)}
+                                        className="p-1.5 bg-gray-100 rounded-full text-gray-600 hover:bg-red-100 hover:text-red-600"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className={`bg-white rounded-2xl p-4 shadow-sm border transition-colors ${
+                                  isEditMode ? 'border-dashed border-gray-300' : 'border-gray-100'
+                                }`}>
+                                  <div className="flex justify-between items-start mb-1">
+                                    <h4 className="font-bold text-gray-800 text-base">{activity.title}</h4>
+                                    <div className="flex gap-2">
+                                      <a href={getGoogleMapsUrl(activity.location)} target="_blank" rel="noreferrer">
+                                        <ExternalLink size={14} className="text-gray-300 hover:text-okinawa-blue" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                                    <MapPin size={12} className="shrink-0" />
+                                    <span className="truncate">{activity.location}</span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-2 mt-1">
+                                    {activity.description}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Transport Info */}
+                              {activity.transportSuggestion && (
+                                <div className="ml-2 mt-2 flex items-center gap-2 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded-md w-fit">
+                                  <Train size={10} /> {activity.transportSuggestion}
+                                </div>
+                              )}
                             </div>
                           </div>
-
-                          {/* Card Content */}
-                          <div className="flex-1 min-w-0">
-                             <div className="relative">
-                               <div className="flex justify-between items-baseline gap-2 mb-1">
-                                 <span className="font-mono text-lg font-bold text-blue-600">{activity.time}</span>
-                                 
-                                 {/* ✨ 編輯/刪除按鈕 (只在編輯模式顯示) */}
-                                 {isEditMode && (
-                                   <div className="flex gap-2">
-                                     <button 
-                                       onClick={() => handleEditClick(safeActiveDay, index, activity)}
-                                       className="p-1.5 bg-gray-100 rounded-full text-gray-600 hover:bg-blue-100 hover:text-blue-600"
-                                     >
-                                       <Edit2 size={14} />
-                                     </button>
-                                     <button 
-                                       onClick={() => deleteActivity(safeActiveDay, index)}
-                                       className="p-1.5 bg-gray-100 rounded-full text-gray-600 hover:bg-red-100 hover:text-red-600"
-                                     >
-                                       <Trash2 size={14} />
-                                     </button>
-                                   </div>
-                                 )}
-                               </div>
-                               
-                               <div className={`bg-white rounded-2xl p-4 shadow-sm border transition-colors ${
-                                 isEditMode ? 'border-dashed border-gray-300' : 'border-gray-100'
-                               }`}>
-                                 <div className="flex justify-between items-start mb-1">
-                                  <h4 className="font-bold text-gray-800 text-base">{activity.title}</h4>
-                                  <div className="flex gap-2">
-                                    <a href={getGoogleMapsUrl(activity.location)} target="_blank" rel="noreferrer">
-                                      <ExternalLink size={14} className="text-gray-300 hover:text-okinawa-blue" />
-                                    </a>
-                                  </div>
-                                </div>
-                                 <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                                   <MapPin size={12} className="shrink-0" />
-                                   <span className="truncate">{activity.location}</span>
-                                 </div>
-                                 <p className="text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-2 mt-1">
-                                   {activity.description}
-                                 </p>
-                               </div>
-                             </div>
-                             
-                             {/* Transport Info */}
-                             {activity.transportSuggestion && (
-                               <div className="ml-2 mt-2 flex items-center gap-2 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded-md w-fit">
-                                 <Train size={10} /> {activity.transportSuggestion}
-                               </div>
-                             )}
-                          </div>
                         </div>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
 
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
+        
         {/* 底部保留空間 */}
         <div className="h-20"></div>
       </div>
